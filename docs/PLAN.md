@@ -64,6 +64,8 @@ resize/
 │   │   │   ├── KeystrokeProfiles.swift   # known apps table
 │   │   │   ├── KeystrokeDriver.swift
 │   │   │   └── KeySender.swift           # CGEvent wrapper (protocol + real impl)
+│   │   ├── Apps/
+│   │   │   └── InstalledAppsScanner.swift
 │   │   ├── Permissions/
 │   │   │   └── AccessibilityPermission.swift
 │   │   └── Coordinator/
@@ -73,6 +75,7 @@ resize/
 │       ├── AppState.swift
 │       ├── MenuBarView.swift
 │       ├── SettingsView.swift
+│       ├── SettingsWindowController.swift
 │       ├── AppPickerView.swift
 │       └── LaunchAtLogin.swift
 ├── Resources/
@@ -316,7 +319,7 @@ static func presses(for percent: Int, scale: ZoomScale, baseFontSize: Double?) -
 - Also `static func effectivePercent(...)`: the percent actually reached, shown in the UI as "≈ 125%".
 
 Tests (`KeystrokeMathTests`):
-- chromium 100→0, 110→+1, 125→+2, 150→+3, 90→−1, 67→−3, 120→+2 (nearest to 125; tie rule), 1000→clamped to last index.
+- chromium 100→0, 110→+1, 125→+2, 150→+3, 90→−1, 67→−4 (100→90→80→75→67), 120→+2 (nearest to 125; tie rule), 1000→clamped to last index.
 - points base 12: 125% → 15pt → +3 presses; 100% → 0; 75% → −3.
 
 ### Step 10 — Sending keys (`KeySender.swift`)
@@ -393,22 +396,13 @@ running app itself. Adjust the protocol in Step 7 accordingly. Cover:
 
 ### Step 13 — App target UI (`Sources/Resize`)
 
-`ResizeApp.swift`:
-```swift
-@main struct ResizeApp: App {
-    @State private var state = AppState()
-    var body: some Scene {
-        MenuBarExtra("Resize", systemImage: "plus.magnifyingglass") {
-            MenuBarView().environment(state)
-        }
-        .menuBarExtraStyle(.window)
-        Window("Resize Settings", id: "settings") {
-            SettingsView().environment(state)
-        }
-        .windowResizability(.contentSize)
-    }
-}
-```
+`ResizeApp.swift`: a single `MenuBarExtra` scene (`.menuBarExtraStyle(.window)`) whose label view opens the settings window
+on first launch (while `hasCompletedOnboarding == false`).
+
+**The settings window is not a SwiftUI `Window` scene.** `SettingsWindowController` owns an `NSWindow` hosting
+`SettingsView` via `NSHostingController`. A `Window` scene pops up at every login on macOS 14 (`.defaultLaunchBehavior(.suppressed)`
+needs macOS 15, and `SceneBuilder` has no `if #available`). The controller works the same on 14+ and is opened with
+`AppState.openSettings(route:)`.
 
 `AppState` (`@Observable @MainActor`): owns `ConfigStore`, `config`, the monitors, the coordinator, `currentMode`,
 `isTrusted`, and `lastResults`. Every mutation of `config` saves to disk and calls `coordinator.ruleChanged`
@@ -533,6 +527,11 @@ codesign --force --sign - --identifier dev.xingyulong.Resize "$APP"
 echo "$APP"
 ```
 `run.sh`: `pkill -x Resize || true; open "$(scripts/bundle.sh)"`.
+
+> **Implementation status:** Steps 0–15 are implemented on branch `scaffold`. Deviations from the text above:
+> `ZoomContext` carries `pid` (as Step 12 suggested), `DisplayMonitor.currentMode()` uses the online display list so
+> mirrored externals count, and `KeystrokeDriver`/`DriverRegistry` take optional parameters (default arguments can't call
+> main-actor initializers). The manual checklist in §4 has **not** been run yet; it needs a real external display.
 
 ### Step 15 — Docs and finishing
 
