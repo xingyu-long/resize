@@ -97,7 +97,7 @@ Do the steps in order. After each step, `swift build` and `swift test` must pass
 ### Step 0 — Check the environment
 
 1. Run `swift --version` and `xcodebuild -version`. Full Xcode is needed for SwiftUI/AppKit SDKs, not just the Command Line Tools.
-2. The repo is a fresh git repo on branch `master`. Before the first commit, create a feature branch (`git checkout -b scaffold`).
+2. The default branch is `main` (remote: `git@github.com:xingyu-long/resize.git`) and holds only the plan. Create a feature branch before coding (`git checkout -b scaffold`), and open a PR to `main` when done.
 3. Add `.gitignore`: `.build/`, `build/`, `*.app`, `.swiftpm/`, `DerivedData/`, `.DS_Store`.
 
 ### Step 1 — `Package.swift`
